@@ -109,8 +109,7 @@ public class DeleteInventoryPatch : AbstractPatch
             }
         }
 
-        // Respect server insurance config
-        if (insuranceConfig.SimulateItemsBeingTaken || InstantInsurance.ModConfig.SimulateItemsBeingTaken)
+        if (InstantInsurance.ModConfig.SimulateItemsBeingTaken)
         {
             // Get all items to delete before processing insurance package to be sent, which will check if an item's parent will be deleted
             foreach (var (_, insurance) in insuranceTraders)
