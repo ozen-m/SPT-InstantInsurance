@@ -1,0 +1,6 @@
+{
+	"SimulateItemsBeingTaken": true,
+	"LoseInsuranceOnItemAfterDeath": true,
+	"LoseAmmoInMagazines": false,
+	"DebugLogs": true
+}

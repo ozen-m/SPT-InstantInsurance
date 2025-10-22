@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InstantInsurance", "InstantInsurance.csproj", "{C5CB4FEA-2C46-E740-0878-8F206D620FB5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		DebugBE|Any CPU = DebugBE|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.DebugBE|Any CPU.ActiveCfg = DebugBE|Any CPU
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.DebugBE|Any CPU.Build.0 = DebugBE|Any CPU
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5CB4FEA-2C46-E740-0878-8F206D620FB5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {55F5F5A2-135A-4347-9C10-F4956336ED18}
+	EndGlobalSection
+EndGlobal
