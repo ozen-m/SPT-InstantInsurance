@@ -22,7 +22,7 @@ namespace InstantInsurance.Patches;
 
 public class DeleteInventoryPatch : AbstractPatch
 {
-    public static string mapId;
+    public static string MapId;
 
     protected static InsuranceConfig insuranceConfig;
     protected static InsuranceController insuranceController;
@@ -39,6 +39,15 @@ public class DeleteInventoryPatch : AbstractPatch
 
     protected override MethodBase GetTargetMethod()
     {
+        insuranceConfig = ServiceLocator.ServiceProvider.GetRequiredService<ConfigServer>().GetConfig<InsuranceConfig>();
+        insuranceController = ServiceLocator.ServiceProvider.GetRequiredService<InsuranceController>();
+        itemHelper = ServiceLocator.ServiceProvider.GetRequiredService<ItemHelper>();
+        inventoryHelper = ServiceLocator.ServiceProvider.GetRequiredService<InventoryHelper>();
+        traderHelper = ServiceLocator.ServiceProvider.GetRequiredService<TraderHelper>();
+        timeUtil = ServiceLocator.ServiceProvider.GetRequiredService<TimeUtil>();
+        databaseService = ServiceLocator.ServiceProvider.GetRequiredService<DatabaseService>();
+        randomUtil = ServiceLocator.ServiceProvider.GetRequiredService<RandomUtil>();
+
         getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
         findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
         sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
@@ -50,15 +59,6 @@ public class DeleteInventoryPatch : AbstractPatch
 
     protected static bool Prefix(InRaidHelper __instance, PmcData pmcData, MongoId sessionId)
     {
-        insuranceConfig ??= ServiceLocator.ServiceProvider.GetService<ConfigServer>().GetConfig<InsuranceConfig>();
-        insuranceController ??= ServiceLocator.ServiceProvider.GetService<InsuranceController>();
-        itemHelper ??= ServiceLocator.ServiceProvider.GetService<ItemHelper>();
-        inventoryHelper ??= ServiceLocator.ServiceProvider.GetService<InventoryHelper>();
-        traderHelper ??= ServiceLocator.ServiceProvider.GetService<TraderHelper>();
-        timeUtil ??= ServiceLocator.ServiceProvider.GetService<TimeUtil>();
-        databaseService ??= ServiceLocator.ServiceProvider.GetService<DatabaseService>();
-        randomUtil ??= ServiceLocator.ServiceProvider.GetService<RandomUtil>();
-
         Dictionary<MongoId, Insurance> insuranceTraders = [];
         HashSet<Item> itemsProcessed = [];
         HashSet<Item> itemsAmmo = [];
@@ -167,7 +167,7 @@ public class DeleteInventoryPatch : AbstractPatch
                     {
                         Date = timeUtil.GetBsgDateMailFormat(),
                         Time = timeUtil.GetBsgTimeMailFormat(),
-                        Location = mapId,
+                        Location = MapId,
                     };
                     var dialogueTemplates = databaseService.GetTrader(insurance.TraderId).Dialogue;
 

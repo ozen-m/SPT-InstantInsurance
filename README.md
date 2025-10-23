@@ -1,22 +1,22 @@
 # Instant Insurance
 Receive your insured items immediately after death!
 
-Prapor and Therapist’s teams have been reorganized — they’re now faster and more efficient at recovering your items, delivering them straight to your inventory.
+Prapor and Therapist’s teams have been reorganized — they’re now faster and more efficient at recovering your items, delivering them straight to your equipment.
 
 A huge thank you to [Mattdokn](https://forge.sp-tarkov.com/user/41131/mattdokn) for allowing me to continue his work on [Insurance Plus](https://forge.sp-tarkov.com/mod/1545/insurance-plus).
 
 ### Configuration
 In the configuration file `config.json`
 
-- `SimulateItemsBeingTaken` - Items can be taken before the insurer can retrieve your item. Default is `true`
-- `LoseInsuranceOnItemAfterDeath` - Lose insurance status on death. Default is `true`
-- `LoseAmmoInMagazines` - If disabled, ammo that is chambered or loaded into an insured magazine/weapon that is found will be returned. Default is `false`
+- `SimulateItemsBeingTaken` - If enabled, items can be taken before the insurer can retrieve your item. Default is `true`
+- `LoseInsuranceOnItemAfterDeath` - If enabled, insurance status will be lost on death. Default is `true`
+- `LoseAmmoInMagazines` - If enabled, ammo that is loaded into an insured magazine will NOT be kept. Default is `false`
 
 ### Installation
 - Extract the contents of the .zip archive into your SPT directory.
 
 ### Recommended Mods
-- Mods that alter insurance prices and/or insurance return percentages. It is recommended to increase insurance prices to balance the changes done by this mod. [SVM](https://forge.sp-tarkov.com/mod/236/server-value-modifier-svm) by [GhostFenixx](https://forge.sp-tarkov.com/user/3972/ghostfenixx) and [TraderQOL](https://forge.sp-tarkov.com/mod/1547/trader-qol) by [Mattdokn](https://forge.sp-tarkov.com/user/41131/mattdokn) provides options for changing insurance related options
+- Mods that alter insurance prices and/or insurance return percentages. It is recommended to increase insurance prices to balance the changes done by this mod. [SVM](https://forge.sp-tarkov.com/mod/236/server-value-modifier-svm) by [GhostFenixx](https://forge.sp-tarkov.com/user/3972/ghostfenixx), and [TraderQOL](https://forge.sp-tarkov.com/mod/1547/trader-qol) by [Mattdokn](https://forge.sp-tarkov.com/user/41131/mattdokn) provides options for changing insurance related options
 
 ### Compatibility
 - Tested to be compatible with [Project Fika](https://forge.sp-tarkov.com/mod/2326/project-fika)
