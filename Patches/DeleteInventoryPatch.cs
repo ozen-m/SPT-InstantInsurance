@@ -102,7 +102,11 @@ public class DeleteInventoryPatch : AbstractPatch
                     if (ShouldKeepAmmo(child))
                     {
                         itemsAmmo.Add(child);
-                        // Also add initially to itemsToDelete
+
+                        if (!InstantInsurance.ModConfig.SimulateItemsBeingTaken)
+                        {
+                            continue;
+                        }
                     }
                     itemsToDelete.Add(child.Id);
                 }
