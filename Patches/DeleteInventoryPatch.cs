@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Reflection;
 using HarmonyLib;
 using InstantInsurance.Utils;
 using SPTarkov.Reflection.Patching;
@@ -14,49 +16,46 @@ using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils;
-using System.Collections.Frozen;
-using System.Reflection;
 using Insurance = SPTarkov.Server.Core.Models.Eft.Profile.Insurance;
 
 namespace InstantInsurance.Patches;
 
 public class DeleteInventoryPatch : AbstractPatch
 {
-    public static string MapId;
+    public static string MapId { get; set; }
 
-    protected static InsuranceConfig insuranceConfig;
-    protected static InsuranceController insuranceController;
-    protected static ItemHelper itemHelper;
-    protected static InventoryHelper inventoryHelper;
-    protected static TraderHelper traderHelper;
-    protected static TimeUtil timeUtil;
-    protected static DatabaseService databaseService;
-    protected static RandomUtil randomUtil;
+    private static InsuranceConfig _insuranceConfig;
+    private static InsuranceController _insuranceController;
+    private static ItemHelper _itemHelper;
+    private static InventoryHelper _inventoryHelper;
+    private static TraderHelper _traderHelper;
+    private static TimeUtil _timeUtil;
+    private static DatabaseService _databaseService;
+    private static RandomUtil _randomUtil;
 
-    private static MethodInfo getInventoryItemsLostOnDeathMethod;
-    private static MethodInfo findItemsToDeleteMethod;
-    private static MethodInfo sendMailMethod;
+    private static MethodInfo _getInventoryItemsLostOnDeathMethod;
+    private static MethodInfo _findItemsToDeleteMethod;
+    private static MethodInfo _sendMailMethod;
 
     protected override MethodBase GetTargetMethod()
     {
-        insuranceConfig = ServiceLocator.ServiceProvider.GetRequiredService<ConfigServer>().GetConfig<InsuranceConfig>();
-        insuranceController = ServiceLocator.ServiceProvider.GetRequiredService<InsuranceController>();
-        itemHelper = ServiceLocator.ServiceProvider.GetRequiredService<ItemHelper>();
-        inventoryHelper = ServiceLocator.ServiceProvider.GetRequiredService<InventoryHelper>();
-        traderHelper = ServiceLocator.ServiceProvider.GetRequiredService<TraderHelper>();
-        timeUtil = ServiceLocator.ServiceProvider.GetRequiredService<TimeUtil>();
-        databaseService = ServiceLocator.ServiceProvider.GetRequiredService<DatabaseService>();
-        randomUtil = ServiceLocator.ServiceProvider.GetRequiredService<RandomUtil>();
+        _insuranceConfig = ServiceLocator.ServiceProvider.GetRequiredService<ConfigServer>().GetConfig<InsuranceConfig>();
+        _insuranceController = ServiceLocator.ServiceProvider.GetRequiredService<InsuranceController>();
+        _itemHelper = ServiceLocator.ServiceProvider.GetRequiredService<ItemHelper>();
+        _inventoryHelper = ServiceLocator.ServiceProvider.GetRequiredService<InventoryHelper>();
+        _traderHelper = ServiceLocator.ServiceProvider.GetRequiredService<TraderHelper>();
+        _timeUtil = ServiceLocator.ServiceProvider.GetRequiredService<TimeUtil>();
+        _databaseService = ServiceLocator.ServiceProvider.GetRequiredService<DatabaseService>();
+        _randomUtil = ServiceLocator.ServiceProvider.GetRequiredService<RandomUtil>();
 
-        getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
-        findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
-        sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
+        _getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
+        _findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
+        _sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
 
         return AccessTools.Method(typeof(InRaidHelper), nameof(InRaidHelper.DeleteInventory));
     }
 
     [PatchPrefix]
-
     protected static bool Prefix(InRaidHelper __instance, PmcData pmcData, MongoId sessionId)
     {
         Dictionary<MongoId, Insurance> insuranceTraders = [];
@@ -68,10 +67,10 @@ public class DeleteInventoryPatch : AbstractPatch
         int itemsSentByMail = 0;
 
         // Get inventory item ids to remove from players profile
-        IEnumerable<Item> itemsLostOnDeath = (IEnumerable<Item>)getInventoryItemsLostOnDeathMethod.Invoke(__instance, [pmcData]);
+        IEnumerable<Item> itemsLostOnDeath = (IEnumerable<Item>)_getInventoryItemsLostOnDeathMethod.Invoke(__instance, [pmcData])!;
         foreach (Item item in itemsLostOnDeath)
         {
-            var itemAndChildrenLostOnDeath = pmcData.Inventory.Items.GetItemWithChildren(item.Id);
+            var itemAndChildrenLostOnDeath = pmcData.Inventory!.Items!.GetItemWithChildren(item.Id);
             foreach (var child in itemAndChildrenLostOnDeath)
             {
                 itemsProcessed.Add(child);
@@ -82,15 +81,14 @@ public class DeleteInventoryPatch : AbstractPatch
                     {
                         if (itemsToUninsure.Add(child.Id))
                         {
-                            insurance.Items.Add(child);
+                            insurance.Items!.Add(child);
                         }
                     }
                     else
                     {
                         itemsToUninsure.Add(child.Id);
-
                         // Create new insurance package for trader
-                        insuranceTraders[insuredItem.TId] = new()
+                        insuranceTraders[insuredItem.TId] = new Insurance
                         {
                             TraderId = insuredItem.TId,
                             Items = [child],
@@ -102,7 +100,6 @@ public class DeleteInventoryPatch : AbstractPatch
                     if (ShouldKeepAmmo(child))
                     {
                         itemsAmmo.Add(child);
-
                         if (!InstantInsurance.ModConfig.SimulateItemsBeingTaken)
                         {
                             continue;
@@ -119,111 +116,112 @@ public class DeleteInventoryPatch : AbstractPatch
             foreach (var (_, insurance) in insuranceTraders)
             {
                 // Find items that could be taken by another player off the players body, using SPT's method
-                var foundItemsToDelete = (HashSet<MongoId>)findItemsToDeleteMethod.Invoke(insuranceController, [pmcData.Inventory.Equipment.ToString(), insurance]);
+                var foundItemsToDelete = (HashSet<MongoId>)_findItemsToDeleteMethod.Invoke(_insuranceController, [pmcData.Inventory!.Equipment.ToString(), insurance]);
                 itemsToDelete.UnionWith(foundItemsToDelete ?? Enumerable.Empty<MongoId>());
             }
+        }
 
-            var itemsMap = itemsProcessed.GenerateItemsMap();
-            foreach (var (_, insurance) in insuranceTraders)
+        var itemsMap = itemsProcessed.GenerateItemsMap();
+        foreach (var (_, insurance) in insuranceTraders)
+        {
+            // Remove items from the insured items that should not be returned to the player
+            insurance.Items = [.. insurance.Items!.Where(item => !itemsToDelete.Contains(item.Id))];
+
+            // Get ammo from magazines still existing, add it to the insurance package
+            var insuranceItemsIds = insurance.Items.Select(i => i.Id).ToHashSet();
+            var ammoWithAliveParents = itemsAmmo
+                .Where(a => insuranceItemsIds.Contains(a.ParentId))
+                .ToArray();
+
+            // Add it to insurance and keep ammo items from being deleted
+            insurance.Items.AddRange(ammoWithAliveParents);
+            itemsToDelete.ExceptWith(ammoWithAliveParents.Select(a => a.Id));
+
+            itemsKeptByInsurance += insurance.Items.Count;
+
+            // Update insurance package that will be sent by mail
+            var itemsToSend = new List<Item>();
+            foreach (var insured in insurance.Items)
             {
-                // Remove items from the insured items that should not be returned to the player
-                insurance.Items = [.. insurance.Items.Where(item => !itemsToDelete.Contains(item.Id))];
-
-                // Get ammo from magazines still existing, add it to the insurance package
-                var insuranceItemsIds = insurance.Items.Select(i => i.Id);
-                var ammoWithAliveParents = itemsAmmo
-                    .Where(a => insuranceItemsIds.Contains(a.ParentId));
-
-                // Add it to insurance and keep ammo items from being deleted
-                insurance.Items.AddRange(ammoWithAliveParents);
-                itemsToDelete.ExceptWith(ammoWithAliveParents.Select(a => a.Id));
-
-                itemsKeptByInsurance += insurance.Items.Count;
-
-                // Update insurance package that will be sent by mail
-                var itemsToSend = new List<Item>();
-                foreach (var insured in insurance.Items)
+                // Get item parents, then check if any will be removed, if so send the item by mail
+                var parentsIds = GetItemParentsIds(insured.Id, itemsMap);
+                if (itemsToDelete.Any(i => parentsIds.Contains(i)))
                 {
-                    // Get item parents, then check if any will be removed, if so send the item by mail
-                    var parentsIds = GetItemParentsIds(insured.Id, itemsMap);
-                    if (itemsToDelete.Any(i => parentsIds.Contains(i)))
-                    {
-                        itemsToSend.Add(insured);
-                        //LoggerUtil.Debug($"Item {insured.Name()} {insured.Id} has a parent that will be removed, adopting");
-                    }
+                    itemsToSend.Add(insured);
+                    //LoggerUtil.Debug($"Item {insured.Name()} {insured.Id} has a parent that will be removed, sending via mail");
                 }
-                insurance.Items = itemsToSend;
+            }
+            insurance.Items = itemsToSend;
 
-                if (insurance.Items.Count > 0)
+            if (insurance.Items.Count > 0)
+            {
+                itemsSentByMail += insurance.Items.Count;
+
+                // Create a new root parent ID for the message we'll be sending the player
+                var mailRootItemParentId = new MongoId();
+
+                // Populate remaining insurance details, here just to save cycles if no items?
+                var traderBase = _traderHelper.GetTrader(insurance.TraderId, sessionId);
+                var maxInsuranceStorageTime =
+                    _insuranceConfig.StorageTimeOverrideSeconds > 0
+                        ? _insuranceConfig.StorageTimeOverrideSeconds
+                        : _timeUtil.GetHoursAsSeconds((int)traderBase!.Insurance!.MaxStorageTime!);
+                var systemData = new SystemData
                 {
-                    itemsSentByMail += insurance.Items.Count;
+                    Date = _timeUtil.GetBsgDateMailFormat(),
+                    Time = _timeUtil.GetBsgTimeMailFormat(),
+                    Location = MapId,
+                };
+                var dialogueTemplates = _databaseService.GetTrader(insurance.TraderId)!.Dialogue;
 
-                    // Create a new root parent ID for the message we'll be sending the player
-                    var mailRootItemParentId = new MongoId();
+                insurance.MaxStorageTime = (int)maxInsuranceStorageTime;
+                insurance.SystemData = systemData;
+                insurance.MessageType = MessageType.InsuranceReturn;
+                insurance.MessageTemplateId = _randomUtil.GetArrayValue(dialogueTemplates["insuranceFound"]);
+                insurance.Items = insurance.Items.AdoptOrphanedItems(mailRootItemParentId);
 
-                    // Populate remaining insurance details, here just to save cycles if no items?
-                    var traderBase = traderHelper.GetTrader(insurance.TraderId, sessionId);
-                    var maxInsuranceStorageTime =
-                        insuranceConfig.StorageTimeOverrideSeconds > 0
-                        ? insuranceConfig.StorageTimeOverrideSeconds
-                        : timeUtil.GetHoursAsSeconds((int)traderBase.Insurance.MaxStorageTime);
-                    var systemData = new SystemData
-                    {
-                        Date = timeUtil.GetBsgDateMailFormat(),
-                        Time = timeUtil.GetBsgTimeMailFormat(),
-                        Location = MapId,
-                    };
-                    var dialogueTemplates = databaseService.GetTrader(insurance.TraderId).Dialogue;
-
-                    insurance.MaxStorageTime = (int)maxInsuranceStorageTime;
-                    insurance.SystemData = systemData;
-                    insurance.MessageType = MessageType.InsuranceReturn;
-                    insurance.MessageTemplateId = randomUtil.GetArrayValue(dialogueTemplates["insuranceFound"]);
-                    insurance.Items = insurance.Items.AdoptOrphanedItems(mailRootItemParentId);
-
-                    sendMailMethod.Invoke(insuranceController, [sessionId, insurance]);
-                }
+                _sendMailMethod.Invoke(_insuranceController, [sessionId, insurance]);
             }
         }
 
         // Remove itemsToDelete from inventory
         foreach (var itemId in itemsToDelete)
         {
-            inventoryHelper.RemoveItem(pmcData, itemId, sessionId);
+            _inventoryHelper.RemoveItem(pmcData, itemId, sessionId);
         }
 
         // Remove items from insurance
         if (InstantInsurance.ModConfig.LoseInsuranceOnItemAfterDeath)
         {
-            pmcData.InsuredItems = [.. pmcData.InsuredItems.Where(insuredItem => !itemsToUninsure.Contains((MongoId)insuredItem.ItemId))];
+            pmcData.InsuredItems = [.. pmcData.InsuredItems!.Where(insuredItem => !itemsToUninsure.Contains(insuredItem.ItemId!.Value))];
         }
         else
         {
             itemsToUninsure.Clear();
         }
 
-        LoggerUtil.Debug($"--------");
-        LoggerUtil.Debug($"Player: {pmcData.Info.Nickname}"); // Fika
-        LoggerUtil.Debug($"Items processed: {itemsProcessed.Count}");
-        LoggerUtil.Debug($"Items kept: {itemsKeptByInsurance}");
-        LoggerUtil.Debug($"Items removed: {itemsToDelete.Count}");
-        LoggerUtil.Debug($"Items uninsured: {itemsToUninsure.Count}");
-        LoggerUtil.Debug($"Items sent by mail: {itemsSentByMail}");
-        LoggerUtil.Debug($"--------");
+        LoggerUtil.Info("--------");
+        LoggerUtil.Info($"Player: {pmcData.Info!.Nickname}"); // Fika
+        LoggerUtil.Info($"Items processed: {itemsProcessed.Count}");
+        LoggerUtil.Info($"Items kept: {itemsKeptByInsurance}");
+        LoggerUtil.Info($"Items removed: {itemsToDelete.Count}");
+        LoggerUtil.Info($"Items uninsured: {itemsToUninsure.Count}");
+        LoggerUtil.Info($"Items sent by mail: {itemsSentByMail}");
+        LoggerUtil.Info("--------");
 
         // Remove contents of fast panel
-        pmcData.Inventory.FastPanel = [];
+        pmcData.Inventory!.FastPanel = [];
 
         return false;
     }
 
-    protected static bool ShouldKeepAmmo(Item item)
+    private static bool ShouldKeepAmmo(Item item)
     {
         if (InstantInsurance.ModConfig.LoseAmmoInMagazines)
         {
             return false;
         }
-        return itemHelper.IsOfBaseclass(item.Template, BaseClasses.AMMO) && MagazineSlotIds.Contains(item.SlotId);
+        return _itemHelper.IsOfBaseclass(item.Template, BaseClasses.AMMO) && MagazineSlotIds.Contains(item.SlotId);
     }
 
     /// <summary>

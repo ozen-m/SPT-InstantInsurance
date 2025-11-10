@@ -8,38 +8,38 @@ namespace InstantInsurance.Utils;
 
 public static class LoggerUtil
 {
-    public static ISptLogger<InstantInsurance> Logger { get; set; } = null;
-    public static ItemHelper ItemHelper { get; set; } = null;
-    private static ModConfig ModConfig => InstantInsurance.ModConfig;
+    private const string LogPrefix = "[Instant Insurance] ";
 
-    private const string _debugMessagePrefix = "[Instant Insurance] ";
+    public static ISptLogger<InstantInsurance> Logger { get; set; }
+    public static ItemHelper ItemHelper { get; set; }
+    private static ModConfig ModConfig => InstantInsurance.ModConfig;
 
     public static void Debug(string message)
     {
         if (ModConfig.DebugLogs)
         {
-            Logger?.Debug(_debugMessagePrefix + message);
+            Logger?.Debug(LogPrefix + message);
         }
     }
 
     public static void Success(string message)
     {
-        Logger?.Success(_debugMessagePrefix + message);
+        Logger?.Success(LogPrefix + message);
     }
 
     public static void Info(string message)
     {
-        Logger?.Info(_debugMessagePrefix + message);
+        Logger?.Info(LogPrefix + message);
     }
 
     public static void Warning(string message)
     {
-        Logger?.Warning(_debugMessagePrefix + message);
+        Logger?.Warning(LogPrefix + message);
     }
 
     public static void Error(string message)
     {
-        Logger?.Error(_debugMessagePrefix + message);
+        Logger?.Error(LogPrefix + message);
     }
 
     public static string Name(this Item item)

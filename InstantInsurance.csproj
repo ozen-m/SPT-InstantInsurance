@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>ozen</Authors>
     <!-- The two lines below will set the output path for the binaries -->
     <OutputPath>bin\$(Configuration)\$(ProjectName)\$(AssemblyName)\</OutputPath>
@@ -15,10 +15,10 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="SPTarkov.Common" Version="4.0.1" />
-    <PackageReference Include="SPTarkov.DI" Version="4.0.1" />
-    <PackageReference Include="SPTarkov.Server.Core" Version="4.0.1" />
-    <PackageReference Include="SPTarkov.Reflection" Version="4.0.1" />
+    <PackageReference Include="SPTarkov.Common" Version="4.0.4" />
+    <PackageReference Include="SPTarkov.DI" Version="4.0.4" />
+    <PackageReference Include="SPTarkov.Server.Core" Version="4.0.4" />
+    <PackageReference Include="SPTarkov.Reflection" Version="4.0.4" />
   </ItemGroup>
   
   <ItemGroup>
@@ -38,14 +38,12 @@
       <PDB Include="$(TargetDir)$(TargetName).pdb" Condition="'$(Configuration)' != 'Release'" />
     </ItemGroup>
 
-    <RemoveDir Directories="$(DestDir)" />
     <MakeDir Directories="$(DestDir)" />
     <Copy SourceFiles="@(OutputDLL)" DestinationFolder="$(DestDir)" />
     <Copy SourceFiles="@(Config)" DestinationFolder="$(DestDir)\config\" />
     <Copy SourceFiles="@(PDB)" DestinationFolder="$(DestDir)" />
 
     <!-- Release -->
-    <RemoveDir Directories="'$(ReleaseDir)'" Condition="'$(Configuration)' == 'Release'" />
     <MakeDir Directories="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)" Condition="'$(Configuration)' == 'Release'" />
     <Copy SourceFiles="@(OutputDLL)" DestinationFolder="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)" Condition="'$(Configuration)' == 'Release'" />
     <Copy SourceFiles="@(Config)" DestinationFolder="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)\config" Condition="'$(Configuration)' == 'Release'" />
