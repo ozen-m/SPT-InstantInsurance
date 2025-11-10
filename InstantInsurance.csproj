@@ -10,8 +10,6 @@
     <!-- The two lines below will set the output path for the binaries -->
     <OutputPath>bin\$(Configuration)\$(ProjectName)\$(AssemblyName)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <Configurations>Debug;Release;DebugBE</Configurations>
-    <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
   
   <ItemGroup>
@@ -20,33 +18,15 @@
     <PackageReference Include="SPTarkov.Server.Core" Version="4.0.4" />
     <PackageReference Include="SPTarkov.Reflection" Version="4.0.4" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="Configuration\" />
-  </ItemGroup>
-  
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+
+  <Target Name="SetOutput" AfterTargets="Build">
     <PropertyGroup>
-      <DestDir>$(ProjectDir)..\..\SPT\user\mods\$(Authors)-$(ProjectName)</DestDir>
-      <DestDir Condition="'$(Configuration)' == 'DebugBE'">$(ProjectDir)..\..\DEVELOPMENT\_SPT_server-csharp\SPTarkov.Server\bin\Release\net9.0\user\mods\$(Authors)-$(ProjectName)</DestDir>
-      <ReleaseDir Condition="'$(Configuration)' == 'Release'">$(ProjectDir)\Dist\Release</ReleaseDir>
+      <DestDir>SPT\user\mods\$(Authors)-$(RootNamespace)</DestDir>
     </PropertyGroup>
-    
     <ItemGroup>
       <OutputDLL Include="$(TargetPath)" />
-      <Config Include="$(TargetDir)/config/*" />
+      <Config Include="$(TargetDir)\config\**\*" />
       <PDB Include="$(TargetDir)$(TargetName).pdb" Condition="'$(Configuration)' != 'Release'" />
     </ItemGroup>
-
-    <MakeDir Directories="$(DestDir)" />
-    <Copy SourceFiles="@(OutputDLL)" DestinationFolder="$(DestDir)" />
-    <Copy SourceFiles="@(Config)" DestinationFolder="$(DestDir)\config\" />
-    <Copy SourceFiles="@(PDB)" DestinationFolder="$(DestDir)" />
-
-    <!-- Release -->
-    <MakeDir Directories="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)" Condition="'$(Configuration)' == 'Release'" />
-    <Copy SourceFiles="@(OutputDLL)" DestinationFolder="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)" Condition="'$(Configuration)' == 'Release'" />
-    <Copy SourceFiles="@(Config)" DestinationFolder="$(ReleaseDir)\SPT\user\mods\$(Authors)-$(ProjectName)\config" Condition="'$(Configuration)' == 'Release'" />
-    <ZipDirectory SourceDirectory="$(ReleaseDir)" DestinationFile="$(ReleaseDir)\..\$(Authors)-$(ProjectName).zip" Overwrite="true" Condition="'$(Configuration)' == 'Release'" />
   </Target>
 </Project>

@@ -47,7 +47,6 @@ public class InstantInsurance(
                 throw new FileNotFoundException(path);
             }
             ModConfig = jsonUtil.DeserializeFromFile<ModConfig>(path);
-            //ModConfig = modHelper.GetJsonDataFromFile<ModConfig>(ConfigPath, "config.json");
         }
         catch (Exception ex)
         {
