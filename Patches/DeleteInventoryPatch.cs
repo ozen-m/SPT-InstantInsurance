@@ -23,6 +23,9 @@ namespace InstantInsurance.Patches;
 public class DeleteInventoryPatch : AbstractPatch
 {
     public static string MapId { get; set; }
+    private static readonly MethodInfo _getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
+    private static readonly MethodInfo _findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
+    private static readonly MethodInfo _sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
 
     private static InsuranceConfig _insuranceConfig;
     private static InsuranceController _insuranceController;
@@ -33,9 +36,7 @@ public class DeleteInventoryPatch : AbstractPatch
     private static DatabaseService _databaseService;
     private static RandomUtil _randomUtil;
 
-    private static MethodInfo _getInventoryItemsLostOnDeathMethod;
-    private static MethodInfo _findItemsToDeleteMethod;
-    private static MethodInfo _sendMailMethod;
+    public static string MapId { get; set; }
 
     protected override MethodBase GetTargetMethod()
     {
@@ -47,10 +48,6 @@ public class DeleteInventoryPatch : AbstractPatch
         _timeUtil = ServiceLocator.ServiceProvider.GetRequiredService<TimeUtil>();
         _databaseService = ServiceLocator.ServiceProvider.GetRequiredService<DatabaseService>();
         _randomUtil = ServiceLocator.ServiceProvider.GetRequiredService<RandomUtil>();
-
-        _getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
-        _findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
-        _sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
 
         return AccessTools.Method(typeof(InRaidHelper), nameof(InRaidHelper.DeleteInventory));
     }
