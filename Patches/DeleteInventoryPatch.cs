@@ -22,7 +22,6 @@ namespace InstantInsurance.Patches;
 
 public class DeleteInventoryPatch : AbstractPatch
 {
-    public static string MapId { get; set; }
     private static readonly MethodInfo _getInventoryItemsLostOnDeathMethod = AccessTools.Method(typeof(InRaidHelper), "GetInventoryItemsLostOnDeath");
     private static readonly MethodInfo _findItemsToDeleteMethod = AccessTools.Method(typeof(InsuranceController), "FindItemsToDelete");
     private static readonly MethodInfo _sendMailMethod = AccessTools.Method(typeof(InsuranceController), "SendMail");
@@ -118,6 +117,12 @@ public class DeleteInventoryPatch : AbstractPatch
             }
         }
 
+        // Check if insurance is disabled for the location
+        if (IsLocationInsuranceDisabled())
+        {
+            itemsToDelete.UnionWith(itemsLostOnDeath.Select(i => i.Id));
+        }
+
         var itemsMap = itemsProcessed.GenerateItemsMap();
         foreach (var (_, insurance) in insuranceTraders)
         {
@@ -199,6 +204,7 @@ public class DeleteInventoryPatch : AbstractPatch
 
         LoggerUtil.Info("--------");
         LoggerUtil.Info($"Player: {pmcData.Info!.Nickname}"); // Fika
+        LoggerUtil.Info($"Map: {MapId}");
         LoggerUtil.Info($"Items processed: {itemsProcessed.Count}");
         LoggerUtil.Info($"Items kept: {itemsKeptByInsurance}");
         LoggerUtil.Info($"Items removed: {itemsToDelete.Count}");
@@ -220,6 +226,12 @@ public class DeleteInventoryPatch : AbstractPatch
         }
         return _itemHelper.IsOfBaseclass(item.Template, BaseClasses.AMMO) && MagazineSlotIds.Contains(item.SlotId);
     }
+
+    /// <summary>
+    /// Check if insurance is allowed for the current map.
+    /// Fallbacks to <c>false</c> if the map's insurance setting is not found
+    /// </summary>
+    private static bool IsLocationInsuranceDisabled() => !(_databaseService.GetLocation(MapId)?.Base?.Insurance ?? true);
 
     /// <summary>
     /// Return the player's insured item from <seealso cref="BotBase.InsuredItems"/>
