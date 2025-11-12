@@ -1,20 +1,12 @@
 {
-  "profiles": {
-    "SPTarkov.Server": {
-      "commandName": "Executable",
-      "executablePath": ".\\SPT.Server.exe",
-      "commandLineArgs": "",
-      "workingDirectory": "..\\..\\SPT",
-      "environmentVariables": {
-      }
-    },
-    "SPTarkov.Server.BE": {
-      "commandName": "Executable",
-      "executablePath": ".\\SPT.Server.exe",
-      "commandLineArgs": "",
-      "workingDirectory": "..\\..\\DEVELOPMENT\\_SPT_server-csharp\\SPTarkov.Server\\bin\\Release\\net9.0",
-      "environmentVariables": {
-      }
+    "profiles": {
+        "SPTarkov.Server": {
+            "commandName": "Executable",
+            "executablePath": ".\\SPT.Server.exe",
+            "commandLineArgs": "",
+            "workingDirectory": "..\\..\\SPT",
+            "environmentVariables": {
+            }
+        }
     }
-  }
 }

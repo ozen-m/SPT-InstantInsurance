@@ -14,7 +14,7 @@ public static class LoggerUtil
     public static ItemHelper ItemHelper { get; set; }
     private static ModConfig ModConfig => InstantInsurance.ModConfig;
 
-    public static void Debug(string message)
+    public static void Debug(object message)
     {
         if (ModConfig.DebugLogs)
         {
@@ -22,22 +22,22 @@ public static class LoggerUtil
         }
     }
 
-    public static void Success(string message)
+    public static void Success(object message)
     {
         Logger?.Success(LogPrefix + message);
     }
 
-    public static void Info(string message)
+    public static void Info(object message)
     {
         Logger?.Info(LogPrefix + message);
     }
 
-    public static void Warning(string message)
+    public static void Warning(object message)
     {
         Logger?.Warning(LogPrefix + message);
     }
 
-    public static void Error(string message)
+    public static void Error(object message)
     {
         Logger?.Error(LogPrefix + message);
     }
