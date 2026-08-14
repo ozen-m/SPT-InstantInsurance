@@ -1,57 +1,24 @@
-using System.Reflection;
-using InstantInsurance.Configuration;
 using InstantInsurance.Utils;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Utils;
+using SPTarkov.Server.Core.Helpers.Items;
 
 namespace InstantInsurance;
 
-[Injectable(TypePriority = OnLoadOrder.PreSptModLoader + 1)]
-public class InstantInsurance(
-    ISptLogger<InstantInsurance> logger,
-    ModHelper modHelper,
-    JsonUtil jsonUtil,
-    ItemHelper itemHelper,
-    PatchManager patchManager
-) : IOnLoad
+[Injectable(TypePriority = OnLoadOrder.Preload + 1000)]
+public class InstantInsurance(InstantInsuranceLogger L, ItemHelper itemHelper, IEnumerable<IRuntimePatch> patches) : IOnLoad
 {
-    public static ModConfig ModConfig { get; private set; } = new();
-
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        LoggerUtil.Logger = logger;
-        LoggerUtil.ItemHelper = itemHelper;
+        CommonExtensions.SetItemHelper(itemHelper);
 
-        var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
-        var configPath = Path.Combine(modPath, "config", "config.json");
-        LoadConfig(configPath);
+        foreach (var patch in patches)
+        {
+            patch.Enable();
+        }
 
-        patchManager.PatcherName = "FoldablesPatcher";
-        patchManager.AutoPatch = true;
-        patchManager.EnablePatches();
-
-        LoggerUtil.Success("loaded successfully!");
+        L.Success("loaded successfully!");
         return Task.CompletedTask;
-    }
-
-    private void LoadConfig(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
-            {
-                throw new FileNotFoundException(path);
-            }
-            ModConfig = jsonUtil.DeserializeFromFile<ModConfig>(path);
-        }
-        catch (Exception ex)
-        {
-            LoggerUtil.Error(ex.ToString());
-            LoggerUtil.Error("Configuration load error, using default values. Misconfigured config.json? ");
-        }
     }
 }

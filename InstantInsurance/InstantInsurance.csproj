@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
     <RootNamespace>InstantInsurance</RootNamespace>
-    <Version>1.0.3</Version>
+    <Version>1.1.0</Version>
     <Authors>ozen</Authors>
     <AssemblyName>$(Authors).$(RootNamespace)</AssemblyName>
     <RepositoryUrl>https://github.com/ozen-m/SPT-InstantInsurance</RepositoryUrl>

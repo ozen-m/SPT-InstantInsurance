@@ -1,6 +1,6 @@
 namespace InstantInsurance.Configuration;
 
-public class ModConfig
+public class InstantInsuranceConfig
 {
     public bool SimulateItemsBeingTaken { get; set; } = true;
     public bool LoseInsuranceOnItemAfterDeath { get; set; } = true;
