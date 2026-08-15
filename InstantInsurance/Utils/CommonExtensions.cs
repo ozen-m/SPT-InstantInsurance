@@ -6,7 +6,7 @@ namespace InstantInsurance.Utils;
 
 public static class CommonExtensions
 {
-    private static ItemHelper _itemHelper;
+    private static ItemHelper _itemHelper = null!;
 
     public static void SetItemHelper(ItemHelper itemHelper)
     {

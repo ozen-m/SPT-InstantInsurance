@@ -30,6 +30,7 @@ public class InstantInsuranceController(
     InRaidHelper inRaidHelper,
     ItemHelper itemHelper,
     TraderHelper traderHelper,
+    TakeItemsHelper takeItemsHelper,
     TradersTable tradersTable,
     LocationTable locationTable,
     TimeUtil timeUtil,
@@ -55,64 +56,101 @@ public class InstantInsuranceController(
             return true;
         }
 
+        // Classify items lost on death
         Dictionary<MongoId, Insurance> packages = [];
-        HashSet<Item> itemsProcessed = [];
-        HashSet<Item> ammoToKeep = [];
-        HashSet<MongoId> itemsToUninsure = [];
+        Dictionary<MongoId, MongoId> tradersMap = [];
+        List<Item> insuredItems = [];
+        List<Item> ammoToKeep = [];
         HashSet<MongoId> itemsToDelete = [];
-        var itemsKeptByInsurance = 0;
-        var itemsSentByMail = 0;
 
-        // Get inventory item ids to remove from players profile
-        var allItems = GetAllItemsLostOnDeath(inRaidHelper, pmcData);
-        foreach (var child in allItems)
+        var itemsProcessed = GetAllItemsLostOnDeath(inRaidHelper, pmcData);
+        foreach (var child in itemsProcessed)
         {
-            itemsProcessed.Add(child);
             var insuredItem = GetInsuredItem(pmcData, child.Id);
             if (insuredItem is not null)
             {
-                if (!packages.TryGetValue(insuredItem.TId, out _))
+                if (!packages.TryGetValue(insuredItem.TId, out var package))
                 {
                     // Create new insurance package for trader
-                    packages[insuredItem.TId] = new Insurance { TraderId = insuredItem.TId, Items = [], };
+                    package = new Insurance { TraderId = insuredItem.TId, Items = [], };
+                    packages[insuredItem.TId] = package;
                 }
 
-                packages[insuredItem.TId].Items!.Add(child);
-                if (config.LoseInsuranceOnItemAfterDeath)
-                {
-                    itemsToUninsure.Add(child.Id);
-                }
-
+                package.Items!.Add(child);
+                insuredItems.Add(child); 
+                tradersMap.Add(child.Id, insuredItem.TId);
                 continue;
             }
 
             if (ShouldKeepAmmo(child))
             {
                 ammoToKeep.Add(child);
+                continue;
             }
 
             itemsToDelete.Add(child.Id);
         }
 
-        var equipmentId = pmcData.Inventory.Equipment.ToString();
-        if (equipmentId is null)
-        {
-            L.Error("PmcData.Inventory.Equipment is null when trying to process inventory, falling back to SPT");
-            return true;
-        }
-
-        // Get all items to delete before processing insurance package to be sent, which will check if an item's parent will be deleted
+        // Simulate items being taken before processing insurance package to be sent, which will check if an item's parent will be deleted
         if (config.SimulateItemsBeingTaken)
         {
-            foreach (var (_, insurance) in packages)
-            {
-                // Find items that could be taken by another player off the players body, using SPT's method
-                var foundItemsToDelete = insuranceController.FindItemsToDelete(equipmentId, insurance);
-                itemsToDelete.UnionWith(foundItemsToDelete);
-            }
+            // Find items that could be taken by another player off the players body
+            var foundItemsToDelete = takeItemsHelper.FindItemsToDelete(insuredItems, tradersMap);
+            itemsToDelete.UnionWith(foundItemsToDelete);
         }
 
+        // Get items to be sent by mail. These items got their parents removed
+        SendOrphanedItemsByMail(
+            packages,
+            itemsProcessed,
+            ammoToKeep,
+            itemsToDelete,
+            mapId,
+            sessionId,
+            out var itemsRemained,
+            out var itemsSentByMail
+        );
+
+        // Remove itemsToDelete from inventory
+        RemoveItemsFromInventory(pmcData, itemsToDelete);
+
+        // Remove items from insurance
+        if (config.LoseInsuranceOnItemAfterDeath)
+        {
+            RemoveInsuranceFromItems(pmcData, insuredItems);
+        }
+
+        LogAfterProcessing(
+            pmcData.Info?.Nickname,
+            mapId,
+            itemsProcessed.Count,
+            insuredItems.Count,
+            itemsRemained,
+            itemsSentByMail,
+            itemsToDelete.Count
+        );
+
+        // Remove contents of fast panel
+        pmcData.Inventory.FastPanel = [];
+
+        return false;
+    }
+
+    private void SendOrphanedItemsByMail(
+        Dictionary<MongoId, Insurance> packages,
+        HashSet<Item> itemsProcessed,
+        List<Item> ammoToKeep,
+        HashSet<MongoId> itemsToDelete,
+        string mapId,
+        MongoId sessionId,
+        out int itemsRemained,
+        out int itemsSentByMail
+    )
+    {
         var itemsMap = itemsProcessed.GenerateItemsMap();
+        var locationInsuranceDisabled = IsLocationInsuranceDisabled(mapId);
+        itemsRemained = 0;
+        itemsSentByMail = 0;
         foreach (var (_, insurance) in packages)
         {
             // Remove items from the insured items that should not be returned to the player
@@ -121,21 +159,18 @@ public class InstantInsuranceController(
             // Get ammo from magazines still existing, add it to the insurance package
             var itemIds = insurance.Items.Select(i => i.Id).ToHashSet();
             var ammoWithParents = ammoToKeep.Where(a => itemIds.Contains(a.ParentId ?? MongoId.Empty())).ToArray();
-
-            // Add it to insurance and keep ammo items from being deleted
             insurance.Items.AddRange(ammoWithParents);
-            itemsToDelete.ExceptWith(ammoWithParents.Select(a => a.Id));
-
-            itemsKeptByInsurance += insurance.Items.Count;
 
             // Let the mail handle insurance message for disabled maps, so it is apparent that insurance is disabled on that map.
             // Else, replace insurance package with items (whose parents are deleted) to be sent by mail.
-            if (IsLocationInsuranceDisabled(mapId))
+            if (locationInsuranceDisabled)
             {
                 itemsToDelete.UnionWith(insurance.Items.Select(i => i.Id));
             }
             else
             {
+                itemsRemained += insurance.Items.Count;
+
                 insurance.Items =
                 [
                     .. insurance.Items.Where(item =>
@@ -146,37 +181,17 @@ public class InstantInsuranceController(
                         }
                     ),
                 ];
+                // Subtract items sent by mail
+                itemsRemained -= insurance.Items.Count;
             }
 
             itemsSentByMail += SendItemsByMail(insurance, mapId, sessionId);
         }
-
-        // Remove itemsToDelete from inventory
-        pmcData.Inventory.Items = [.. pmcData.Inventory.Items.Where(i => !itemsToDelete.Contains(i.Id))];
-
-        // Remove items from insurance
-        if (config.LoseInsuranceOnItemAfterDeath && pmcData.InsuredItems is not null)
-        {
-            pmcData.InsuredItems =
-                [.. pmcData.InsuredItems.Where(insuredItem => !itemsToUninsure.Contains(insuredItem.ItemId.GetValueOrDefault()))];
-        }
-
-        L.Info("--------");
-        L.Info($"Player: {pmcData.Info!.Nickname}"); // Fika
-        L.Info($"Map: {mapId}");
-        L.Info($"Items processed: {itemsProcessed.Count}");
-        L.Info($"Items kept: {itemsKeptByInsurance}");
-        L.Info($"Items removed: {itemsToDelete.Count}");
-        L.Info($"Items uninsured: {itemsToUninsure.Count}");
-        L.Info($"Items sent by mail: {itemsSentByMail}");
-        L.Info("--------");
-
-        // Remove contents of fast panel
-        pmcData.Inventory.FastPanel = [];
-
-        return false;
     }
 
+    /// <summary>
+    /// Populate the rest of the insurance package, then send it
+    /// </summary>
     private int SendItemsByMail(Insurance insurance, string mapId, MongoId sessionId)
     {
         if (insurance.Items is null || insurance.Items.Count == 0)
@@ -188,7 +203,7 @@ public class InstantInsuranceController(
         var mailRootItemParentId = new MongoId();
 
         var traderBase = traderHelper.GetTrader(insurance.TraderId, sessionId);
-        var maxInsuranceStorageTime = insuranceConfig.StorageTimeOverrideSeconds > 0
+        var maxInsuranceStorageTime = insuranceConfig.StorageTimeOverrideSeconds > 0d
             ? insuranceConfig.StorageTimeOverrideSeconds
             : timeUtil.GetHoursAsSeconds((int)traderBase!.Insurance!.MaxStorageTime!);
         var systemData = new SystemData
@@ -218,15 +233,68 @@ public class InstantInsuranceController(
     /// Check if insurance is allowed for the current map.
     /// Fallbacks to <c>false</c> if the map's insurance setting is not found
     /// </summary>
-    public bool IsLocationInsuranceDisabled(string mapId)
+    private bool IsLocationInsuranceDisabled(string mapId)
     {
         return !(locationTable.GetLocation(mapId)?.Base.Insurance ?? true);
     }
 
-    public static IEnumerable<Item> GetAllItemsLostOnDeath(InRaidHelper inRaidHelper, PmcData pmcData)
+    private void RemoveItemsFromInventory(PmcData pmcData, HashSet<MongoId> itemsToDelete)
+    {
+        if (pmcData.Inventory is null)
+        {
+            L.Error("Unexpected missing PmcData.Inventory");
+            return;
+        }
+        if (pmcData.Inventory.Items is null)
+        {
+            L.Error("Unexpected missing pmcData.Inventory.Items");
+            return;
+        }
+
+        pmcData.Inventory.Items = [.. pmcData.Inventory.Items.Where(i => !itemsToDelete.Contains(i.Id))];
+    }
+
+    private void RemoveInsuranceFromItems(PmcData pmcData, List<Item> insuredItems)
+    {
+        if (pmcData.InsuredItems is null)
+        {
+            L.Error("Unexpected missing InsuredItems from PmcData");
+            return;
+        }
+
+        var insuredItemsIds = insuredItems.Select(i => i.Id).ToHashSet();
+        pmcData.InsuredItems = [.. pmcData.InsuredItems.Where(insuredItem => !insuredItemsIds.Contains(insuredItem.ItemId.GetValueOrDefault()))];
+    }
+
+    private void LogAfterProcessing(
+        string? nickname,
+        string mapId,
+        int processedCount,
+        int insuredCount,
+        int remainedCount,
+        int sentCount,
+        int deletedCount
+    )
+    {
+        L.Info($"""
+                Insurance Report
+                Player: {nickname}
+                Map: {mapId}
+                -
+                Processed: {processedCount}
+                Insured: {insuredCount}
+                Not-Insured: {processedCount - insuredCount}
+                -
+                Remained: {remainedCount}
+                Sent by Mail: {sentCount}
+                Removed: {deletedCount}
+                """);
+    }
+
+    public static HashSet<Item> GetAllItemsLostOnDeath(InRaidHelper inRaidHelper, PmcData pmcData)
     {
         var itemsLost = inRaidHelper.GetInventoryItemsLostOnDeath(pmcData);
-        return itemsLost.SelectMany(i => pmcData.Inventory?.Items?.GetItemWithChildren(i.Id) ?? Enumerable.Empty<Item>());
+        return [.. itemsLost.SelectMany(i => pmcData.Inventory?.Items?.GetItemWithChildren(i.Id) ?? Enumerable.Empty<Item>())];
     }
 
     /// <summary>
@@ -241,8 +309,8 @@ public class InstantInsuranceController(
     }
 
     /// <summary>
-    /// Modified <see cref="ItemHelper.GetEquipmentParent"/> to return a list of parents<br></br><br></br>
-    /// This gives all the equipment's parents instead.
+    /// Modified <see cref="ItemHelper.GetEquipmentParent"/><br></br><br></br>
+    /// This gives a HashSet of all the equipment's parents.
     /// 
     /// Retrieves the equipment parent item for a given item.<br></br><br></br>
     ///
@@ -256,7 +324,7 @@ public class InstantInsuranceController(
     /// </summary>
     /// <param name="itemId">The unique identifier of the item for which to find the equipment parent.</param>
     /// <param name="itemsMap">A Dictionary containing item IDs mapped to their corresponding Item objects for quick lookup.</param>
-    /// <returns>A list of parents item ids</returns>
+    /// <returns>A HashSet of parents item ids</returns>
     public static HashSet<MongoId> GetItemParentsIds(MongoId itemId, Dictionary<MongoId, Item> itemsMap)
     {
         var parentResults = new HashSet<MongoId>();
@@ -296,4 +364,6 @@ public class InstantInsuranceController(
         nameof(EquipmentSlots.Holster),
         nameof(EquipmentSlots.Scabbard),
     ];
+
+    // TODO: if wipeOnRaidStart == true, runs twice! next run doesn't have anymore insurance for items on raid start...
 }
