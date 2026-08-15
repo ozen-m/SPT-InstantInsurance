@@ -1,50 +1,21 @@
-using InstantInsurance.Configuration;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Items;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Models.Utils;
 
 namespace InstantInsurance.Utils;
 
-public static class LoggerUtil
+public static class CommonExtensions
 {
-    private const string LogPrefix = "[Instant Insurance] ";
+    private static ItemHelper _itemHelper = null!;
 
-    public static ISptLogger<InstantInsurance> Logger { get; set; }
-    public static ItemHelper ItemHelper { get; set; }
-    private static ModConfig ModConfig => InstantInsurance.ModConfig;
-
-    public static void Debug(object message)
+    public static void SetItemHelper(ItemHelper itemHelper)
     {
-        if (ModConfig.DebugLogs)
-        {
-            Logger?.Debug(LogPrefix + message);
-        }
-    }
-
-    public static void Success(object message)
-    {
-        Logger?.Success(LogPrefix + message);
-    }
-
-    public static void Info(object message)
-    {
-        Logger?.Info(LogPrefix + message);
-    }
-
-    public static void Warning(object message)
-    {
-        Logger?.Warning(LogPrefix + message);
-    }
-
-    public static void Error(object message)
-    {
-        Logger?.Error(LogPrefix + message);
+        _itemHelper = itemHelper;
     }
 
     public static string Name(this Item item)
     {
-        return ItemHelper?.GetItemName(item.Template);
+        return _itemHelper.GetItemName(item.Template);
     }
 
     public static string ListIdsAndNames(this IEnumerable<Item> items)

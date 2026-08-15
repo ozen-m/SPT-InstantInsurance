@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="InstantInsurance.Tests/InstantInsurance.Tests.csproj" />
+  <Project Path="InstantInsurance/InstantInsurance.csproj" />
+</Solution>
