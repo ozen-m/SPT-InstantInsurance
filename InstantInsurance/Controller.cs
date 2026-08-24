@@ -91,7 +91,7 @@ public class InstantInsuranceController(
             if (ShouldKeepAmmo(child))
             {
                 ammoToKeep.Add(child);
-                continue;
+                // Add to items to delete initially
             }
 
             itemsToDelete.Add(child.Id);
@@ -162,9 +162,11 @@ public class InstantInsuranceController(
             // Remove items from the insured items that should not be returned to the player
             insurance.Items = [.. insurance.Items!.Where(i => !itemsToDelete.Contains(i.Id))];
 
-            // Get ammo from magazines still existing, add it to the insurance package
+            // Get ammo from magazines still existing
+            // Add it to the insurance package and remove from items to delete
             var itemIds = insurance.Items.Select(i => i.Id).ToHashSet();
             var ammoWithParents = ammoToKeep.Where(a => itemIds.Contains(a.ParentId ?? MongoId.Empty())).ToArray();
+            itemsToDelete.ExceptWith(ammoWithParents.Select(i => i.Id));
             insurance.Items.AddRange(ammoWithParents);
 
             // Let the mail handle insurance message for disabled maps, so it is apparent that insurance is disabled on that map.
