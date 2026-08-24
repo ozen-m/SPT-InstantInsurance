@@ -25,6 +25,7 @@ public class InstantInsuranceController(
     InstantInsuranceLogger L,
     InstantInsuranceConfig config,
     InsuranceConfig insuranceConfig,
+    LostOnDeathConfig lostOnDeathConfig,
     InsuranceController insuranceController,
     ProfileActivityService profileActivityService,
     InRaidHelper inRaidHelper,
@@ -39,6 +40,11 @@ public class InstantInsuranceController(
 {
     public bool ProcessInventory(PmcData pmcData, MongoId sessionId)
     {
+        if (lostOnDeathConfig.WipeOnRaidStart)
+        {
+            L.Error(InstantInsurance.IncompatibleMessage);
+            return true;
+        }
         if (pmcData.Inventory is null)
         {
             L.Error("PmcData.Inventory is null when trying to process inventory, falling back to SPT");
