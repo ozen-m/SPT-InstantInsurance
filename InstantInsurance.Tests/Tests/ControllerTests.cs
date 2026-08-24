@@ -1,4 +1,5 @@
 ﻿using InstantInsurance.Configuration;
+using SPTarkov.Server.Core.Extensions;
 using SPTarkov.Server.Core.Helpers.InRaid;
 using SPTarkov.Server.Core.Helpers.Items;
 using SPTarkov.Server.Core.Models.Common;
@@ -53,6 +54,7 @@ public class ControllerTests
         await _saveServer.LoadProfileAsync(_sessionId, _tcs?.Token ?? CancellationToken.None);
         var profile = _saveServer.GetProfile(_sessionId);
         profile.ProfileInfo?.InvalidOrUnloadableProfile = true; // Disable saving
+        profile.CharacterData.PmcData.Inventory.Items = profile.CharacterData.PmcData.Inventory.Items.AdoptOrphanedItems(MongoId.Empty()); // Adopt orphans for post orphan check
         _originalPmcData = profile.CharacterData.PmcData;
     }
 
@@ -77,6 +79,24 @@ public class ControllerTests
         SetLocation("factory4_day");
     }
 
+    [TearDown]
+    public void PostTestChecks()
+    {
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(
+                _modifiedPmcData.Inventory.Items.AdoptOrphanedItems("Adopted").Where(i => i.ParentId == "Adopted"),
+                Is.Empty,
+                "There should be no orphaned items"
+            );
+            Assert.That(
+                _modifiedPmcData.InsuredItems.Select(i => i.ItemId.GetValueOrDefault()),
+                Is.SubsetOf(_modifiedPmcData.Inventory.Items.Select(i => i.Id)),
+                "All insured items should be found in profile Items"
+            );
+        }
+    }
+
     [Test]
     public void NonTest_Simulate()
     {
@@ -98,7 +118,7 @@ public class ControllerTests
 
         _controller.ProcessInventory(_modifiedPmcData, _sessionId);
 
-        var actualRemainingItems = GetAllItemsLostOnDeath(_modifiedPmcData).Where(IsNotAmmo);
+        var actualRemainingItems = GetAllItemsLostOnDeath(_modifiedPmcData);
 
         using (Assert.EnterMultipleScope())
         {
