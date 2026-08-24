@@ -10,7 +10,7 @@ public record ModMetadata : IModMetadata
     public string Name { get; init; } = "Instant Insurance";
     public string Author { get; init; } = "ozen";
     public List<string>? Contributors { get; init; } = ["Mattdokn", "JustNU"];
-    public Version Version { get; init; } = new("1.1.0");
+    public Version Version { get; init; } = new("1.1.1");
     public Range SptVersion { get; init; } = new("~4.1.2");
     public bool HasPrepatcher { get; init; }
     public List<string>? Incompatibilities { get; init; } = 
