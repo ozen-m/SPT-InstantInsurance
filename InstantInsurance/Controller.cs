@@ -252,6 +252,12 @@ public class InstantInsuranceController(
         }
 
         pmcData.Inventory.Items = [.. pmcData.Inventory.Items.Where(i => !itemsToDelete.Contains(i.Id))];
+
+        // Also remove from insured items list
+        if (pmcData.InsuredItems is not null)
+        {
+            pmcData.InsuredItems = [.. pmcData.InsuredItems.Where(i => !itemsToDelete.Contains(i.ItemId.GetValueOrDefault()))];
+        }
     }
 
     private void RemoveInsuranceFromItems(PmcData pmcData, List<Item> insuredItems)
