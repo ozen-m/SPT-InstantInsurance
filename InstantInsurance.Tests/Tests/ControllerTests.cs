@@ -118,10 +118,9 @@ public class ControllerTests
         _controller.ProcessInventory(_modifiedPmcData, _sessionId);
 
         var itemsToLose = GetAllItemsLostOnDeath(_originalPmcData);
-        var expectedItemsToRemain =
-            GetAllInsuredItems(_originalPmcData, itemsToLose).Where(IsNotAmmo); // Remove ammo from equations
+        var expectedItemsToRemain = GetAllInsuredItems(_originalPmcData, itemsToLose);
 
-        var actualRemainingItems = GetAllItemsLostOnDeath(_modifiedPmcData).Where(IsNotAmmo);
+        var actualRemainingItems = GetAllItemsLostOnDeath(_modifiedPmcData).Where(IsNotAmmo); // Remove ammo from equation
         var actualRemainingNonInsuredItems =
             GetAllNonInsuredItems(_originalPmcData, actualRemainingItems); // Use original to check if they're insured
 
@@ -223,7 +222,8 @@ public class ControllerTests
 
         _controller.ProcessInventory(_modifiedPmcData, _sessionId);
 
-        var loseInsuranceToItems = GetAllItemsLostOnDeath(_modifiedPmcData);
+        var itemsToLose = GetAllItemsLostOnDeath(_originalPmcData);
+        var loseInsuranceToItems = GetAllInsuredItems(_originalPmcData, itemsToLose);
 
         var remainingItems = GetAllItemsLostOnDeath(_modifiedPmcData);
         var remainingInsuredItems = GetAllInsuredItems(_modifiedPmcData, loseInsuranceToItems);
