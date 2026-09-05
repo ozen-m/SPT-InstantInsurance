@@ -10,7 +10,7 @@ public record ModMetadata : IModMetadata
     public string Name { get; init; } = "Instant Insurance";
     public string Author { get; init; } = "ozen";
     public List<string>? Contributors { get; init; } = ["Mattdokn", "JustNU"];
-    public Version Version { get; init; } = new("1.1.1");
+    public Version Version { get; init; } = new("1.1.2");
     public Range SptVersion { get; init; } = new("~4.1.2");
     public bool HasPrepatcher { get; init; }
     public List<string>? Incompatibilities { get; init; } = 
@@ -19,6 +19,7 @@ public record ModMetadata : IModMetadata
         "com.gorecreek.fairequipmentrestoration",
         "com.blackhorse311.keepstartinggear",
         "com.thecrimsonfuckr.configurablesoftcore",
+        "eu.thescrewcollab.firmeansifir",
     ];
     public Dictionary<string, Range>? ModDependencies { get; init; }
     public string? Url { get; init; } = "https://github.com/ozen-m/SPT-InstantInsurance";

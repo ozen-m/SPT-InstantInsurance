@@ -15,7 +15,7 @@ namespace InstantInsurance.Utils;
 
 /// <summary>
 ///     Modified <see cref="InsuranceController"/>
-///       - Insured items to delete is not done is done as a whole from a list of items instead of per insurance package.
+///       - Insured items to delete is processed from a list of items instead of per insurance package.
 ///       - MongoId traderId params are replaced with Dictionary (K:MongoId, V:MongoId) tradersMap.
 /// </summary>
 [Injectable]
